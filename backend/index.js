@@ -1,7 +1,7 @@
-var WebSocketServer = require('websocket').server;
-var http = require('http');
+let WebSocketServer = require('websocket').server;
+let http = require('http');
  
-var server = http.createServer(function(request, response) {
+let server = http.createServer(function(request, response) {
     console.log((new Date()) + ' Received request for ' + request.url);
     response.writeHead(404);
     response.end();
@@ -18,6 +18,10 @@ wsServer = new WebSocketServer({
 function originIsAllowed(origin) {
     return true;
 }
+
+let connections = [];
+
+let figures = [];
  
 wsServer.on('request', function(request) {
     if (!originIsAllowed(request.origin)) {
@@ -26,17 +30,15 @@ wsServer.on('request', function(request) {
       return;
     }
     
-    var connection = request.accept('echo-protocol', request.origin);
+    let connection = request.accept();
+    connection.send(JSON.stringify(figures));
+    connections.push(connection);
     console.log((new Date()) + ' Connection accepted.');
     connection.on('message', function(message) {
-        if (message.type === 'utf8') {
-            console.log('Received Message: ' + message.utf8Data);
-            connection.sendUTF(message.utf8Data);
-        }
-        else if (message.type === 'binary') {
-            console.log('Received Binary Message of ' + message.binaryData.length + ' bytes');
-            connection.sendBytes(message.binaryData);
-        }
+        figures.push(message.utf8Data);
+        connections.forEach(connection => {
+            connection.send(JSON.stringify(figures));
+        });
     });
     connection.on('close', function(reasonCode, description) {
         console.log((new Date()) + ' Peer ' + connection.remoteAddress + ' disconnected.');
